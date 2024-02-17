@@ -1,36 +1,33 @@
 from zoneinfo import ZoneInfo
 from datetime import datetime
-import logging
-from logging.handlers import RotatingFileHandler
 import json
 import sys
 
 import requests
 
+import simple_logger
+
 IP_FILE = '.ip.json'
 SLACK_TOKEN_FILE = '.slack.json'
 
-PUB_IP_CHECK_API = 'https://api.ipify.org?format=json'
+PUB_IP_CHECK_API = 'https://api.ipify.org/?format=json'
 SLACK_POST_MSG_API = 'https://slack.com/api/chat.postMessage'
 
-LOG_FORMAT = '{asctime} [{levelname:7}] {name}s {message}'
+logger = simple_logger.get_logger('main')
 
 
-def setup_logger() -> None:
-    handlers = [
-        RotatingFileHandler(filename='ip-reporter.log', encoding='utf-8', maxBytes=64 * 1024, backupCount=1),
-        logging.StreamHandler(sys.stdout)
-    ]
-    logging.basicConfig(
-        format=LOG_FORMAT, style='{', handlers=handlers, level=logging.INFO
-    )
+def update_ip() -> None:
+    ip = get_current_ip()
+
+    with open(IP_FILE, mode='wt') as f:
+        json.dump({'ip': ip}, f)
+        logger.info('IP: %s saved into %s', ip, IP_FILE)
 
 
 def load_previous_ip_from_file() -> str:
     with open(IP_FILE) as ipf:
         j = json.load(ipf)
-        prev_ip = j['ip']
-        return prev_ip
+        return j['ip']
 
 
 def get_current_ip() -> str:
@@ -70,7 +67,7 @@ def format_ip_msg(prev_ip: str, cur_ip: str) -> list[dict]:
     return msg
 
 
-def send_msg_to_slack(msg: str, channel: str = 'dev') -> None:
+def send_msg_to_slack(msg, channel: str = 'dev') -> None:
     token = 'NO-TOKEN'
     with open(SLACK_TOKEN_FILE) as f:
         j = json.load(f)
@@ -87,7 +84,6 @@ def send_msg_to_slack(msg: str, channel: str = 'dev') -> None:
     }
 
     r = requests.post(SLACK_POST_MSG_API, json=body, headers=headers)
-
     r.raise_for_status()
 
     resp = r.json()
@@ -97,12 +93,15 @@ def send_msg_to_slack(msg: str, channel: str = 'dev') -> None:
 
 
 if __name__ == '__main__':
-    setup_logger()
-
-    logger = logging.getLogger()
-    logger.info('Starting ip-reporter')
-
     try:
+        # update ip mode
+        if len(sys.argv) > 1 and sys.argv[1] == 'update':
+            logger.info('Starting ip-reporter in update mode')
+            update_ip()
+            sys.exit()
+
+        # check and report
+        logger.info('Starting ip-reporter in check mode')
         prev_ip = load_previous_ip_from_file()
         logger.info(f'Previous ip was: {prev_ip}')
 
@@ -112,6 +111,16 @@ if __name__ == '__main__':
         msg = format_ip_msg(prev_ip, cur_ip)
         send_msg_to_slack(msg)
         logger.info('Message sent')
+        sys.exit()
 
+    # global error handling
     except Exception as e:
-        logger.exception('error')
+        if isinstance(e, requests.HTTPError):
+            logger.error('Error connecting %s', e.request.url)
+
+            resp = e.response
+            if resp is not None:
+                logger.error('Status code: %s, body: %s', resp.status_code, resp.text)
+        else:
+            logger.exception('error')
+        sys.exit(1)
