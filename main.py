@@ -2,10 +2,21 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 import json
 import sys
+import argparse
 
 import requests
 
 import simple_logger
+
+
+MODES = ['update', 'report']
+MODE_DESC = '''Use mode <update> to save current ip to <.ip.json> file.
+Use mode <report> to check if current ip is the same in the file and send notification to Slack.
+'''
+PROG_DESC = '''
+<update> or <report> ip, the default mode is <report> if not specified.
+'''
+
 
 IP_FILE = '.ip.json'
 SLACK_TOKEN_FILE = '.slack.json'
@@ -92,26 +103,37 @@ def send_msg_to_slack(msg, channel: str = 'dev') -> None:
         raise ValueError(f'Slack responded with: {resp["error"]}')
 
 
+def read_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=PROG_DESC, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--mode', choices=MODES, default='report', help=MODE_DESC)
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     try:
-        # update ip mode
-        if len(sys.argv) > 1 and sys.argv[1] == 'update':
-            logger.info('Starting ip-reporter in update mode')
-            update_ip()
-            sys.exit()
+        args = read_args()
+        mode = args.mode
 
-        # check and report
-        logger.info('Starting ip-reporter in check mode')
-        prev_ip = load_previous_ip_from_file()
-        logger.info(f'Previous ip was: {prev_ip}')
+        match mode:
+            # update ip mode
+            case 'update':
+                logger.info('Starting ip-reporter in update mode')
+                update_ip()
+                sys.exit()
 
-        cur_ip = get_current_ip()
-        logger.info(f'Current ip is: {cur_ip}')
+            # check and report
+            case 'report':
+                logger.info('Starting ip-reporter in check mode')
+                prev_ip = load_previous_ip_from_file()
+                logger.info(f'Previous ip was: {prev_ip}')
 
-        msg = format_ip_msg(prev_ip, cur_ip)
-        send_msg_to_slack(msg)
-        logger.info('Message sent')
-        sys.exit()
+                cur_ip = get_current_ip()
+                logger.info(f'Current ip is: {cur_ip}')
+
+                msg = format_ip_msg(prev_ip, cur_ip)
+                send_msg_to_slack(msg)
+                logger.info('Message sent')
+                sys.exit()
 
     # global error handling
     except Exception as e:
