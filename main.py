@@ -114,26 +114,25 @@ if __name__ == '__main__':
         args = read_args()
         mode = args.mode
 
-        match mode:
-            # update ip mode
-            case 'update':
-                logger.info('Starting ip-reporter in update mode')
-                update_ip()
-                sys.exit()
+        # update ip mode
+        if mode == 'update':
+            logger.info('Starting ip-reporter in update mode')
+            update_ip()
+            sys.exit()
 
-            # check and report
-            case 'report':
-                logger.info('Starting ip-reporter in check mode')
-                prev_ip = load_previous_ip_from_file()
-                logger.info(f'Previous ip was: {prev_ip}')
+        # check and report
+        elif mode == 'report':
+            logger.info('Starting ip-reporter in check mode')
+            prev_ip = load_previous_ip_from_file()
+            logger.info(f'Previous ip was: {prev_ip}')
 
-                cur_ip = get_current_ip()
-                logger.info(f'Current ip is: {cur_ip}')
+            cur_ip = get_current_ip()
+            logger.info(f'Current ip is: {cur_ip}')
 
-                msg = format_ip_msg(prev_ip, cur_ip)
-                send_msg_to_slack(msg)
-                logger.info('Message sent')
-                sys.exit()
+            msg = format_ip_msg(prev_ip, cur_ip)
+            send_msg_to_slack(msg)
+            logger.info('Message sent')
+            sys.exit()
 
     # global error handling
     except Exception as e:
