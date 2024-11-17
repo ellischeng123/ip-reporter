@@ -1,0 +1,1 @@
+0 20 * * * bash ~/.ip-reporter/run.sh >> ~/.ip-reporter/run.log
