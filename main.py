@@ -18,12 +18,12 @@ PROG_DESC = '''
 '''
 
 
-# IP_FILE = '.ip.json'
-IP_FILE = '.ip.example.json'
-# SLACK_TOKEN_FILE = '.slack.json'
-SLACK_TOKEN_FILE = '.slack.example.json'
-# PUMBLE_WEBHOOK_FILE = '.pumble.json'
-PUMBLE_WEBHOOK_FILE = '.pumble.example.json'
+# IP_FILE = '.ip.example.json'
+# SLACK_TOKEN_FILE = '.slack.example.json'
+# PUMBLE_WEBHOOK_FILE = '.pumble.example.json'
+IP_FILE = '.ip.json'
+SLACK_TOKEN_FILE = '.slack.json'
+PUMBLE_WEBHOOK_FILE = '.pumble.json'
 
 PUB_IP_CHECK_API = 'https://api.ipify.org/?format=json'
 SLACK_POST_MSG_API = 'https://slack.com/api/chat.postMessage'
