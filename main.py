@@ -18,8 +18,12 @@ PROG_DESC = '''
 '''
 
 
-IP_FILE = '.ip.json'
-SLACK_TOKEN_FILE = '.slack.json'
+# IP_FILE = '.ip.json'
+IP_FILE = '.ip.example.json'
+# SLACK_TOKEN_FILE = '.slack.json'
+SLACK_TOKEN_FILE = '.slack.example.json'
+# PUMBLE_WEBHOOK_FILE = '.pumble.json'
+PUMBLE_WEBHOOK_FILE = '.pumble.example.json'
 
 PUB_IP_CHECK_API = 'https://api.ipify.org/?format=json'
 SLACK_POST_MSG_API = 'https://slack.com/api/chat.postMessage'
@@ -48,7 +52,7 @@ def get_current_ip() -> str:
     return r.json()['ip']
 
 
-def format_ip_msg(prev_ip: str, cur_ip: str) -> list[dict]:
+def format_ip_msg_for_slack(prev_ip: str, cur_ip: str) -> list[dict]:
     msg = []
 
     status = '❌ IP HAS CHANGED' if prev_ip != cur_ip else '✅ IP NOT CHANGED'
@@ -103,6 +107,37 @@ def send_msg_to_slack(msg, channel: str = 'dev') -> None:
         raise ValueError(f'Slack responded with: {resp["error"]}')
 
 
+def format_ip_msg_for_pumble(prev_ip: str, cur_ip: str) -> str:
+    status = '❌ IP HAS CHANGED' if prev_ip != cur_ip else '✅ IP NOT CHANGED'
+    now = datetime.now(tz=ZoneInfo('Asia/Taipei')).isoformat(timespec="seconds")
+
+    msg = f'{status}{" " * 2}@{" " * 2}{now}'
+    msg += '\n'
+    msg += f'▶ {cur_ip}{" " * 10}⏮ {prev_ip}'
+
+    return msg
+
+
+def send_msg_to_pumble(msg) -> None:
+    with open(PUMBLE_WEBHOOK_FILE) as f:
+        j = json.load(f)
+        webhook = j['webhook']
+
+    headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+    }
+
+    body = {
+        'text': msg
+    }
+
+    r = requests.post(webhook, json=body, headers=headers)
+    r.raise_for_status()
+    resp = r.text
+
+    if not resp or resp.lower() != "ok":
+        raise ValueError(f'Pumble responded with status: {r.status_code}, resp: {resp}')
+
 def read_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=PROG_DESC, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--mode', choices=MODES, default='report', help=MODE_DESC)
@@ -129,8 +164,8 @@ if __name__ == '__main__':
             cur_ip = get_current_ip()
             logger.info(f'Current ip is: {cur_ip}')
 
-            msg = format_ip_msg(prev_ip, cur_ip)
-            send_msg_to_slack(msg)
+            msg = format_ip_msg_for_pumble(prev_ip, cur_ip)
+            send_msg_to_pumble(msg)
             logger.info('Message sent')
             sys.exit()
 
