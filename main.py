@@ -1,3 +1,5 @@
+import os
+import pathlib
 from zoneinfo import ZoneInfo
 from datetime import datetime
 import json
@@ -21,9 +23,10 @@ PROG_DESC = '''
 # IP_FILE = '.ip.example.json'
 # SLACK_TOKEN_FILE = '.slack.example.json'
 # PUMBLE_WEBHOOK_FILE = '.pumble.example.json'
-IP_FILE = '.ip.json'
-SLACK_TOKEN_FILE = '.slack.json'
-PUMBLE_WEBHOOK_FILE = '.pumble.json'
+BASE_PATH = pathlib.PurePath(os.path.realpath(sys.argv[0])).parent
+IP_FILE = BASE_PATH.joinpath('.ip.json')
+SLACK_TOKEN_FILE = BASE_PATH.joinpath('.slack.json')
+PUMBLE_WEBHOOK_FILE = BASE_PATH.joinpath('.pumble.json')
 
 PUB_IP_CHECK_API = 'https://api.ipify.org/?format=json'
 SLACK_POST_MSG_API = 'https://slack.com/api/chat.postMessage'
